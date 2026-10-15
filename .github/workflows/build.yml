@@ -1,0 +1,160 @@
+name: Build Lucid Waker Native APK
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Compile and Sign Native Android APK Directly
+        run: |
+          SDK="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          BUILD_TOOLS=$(ls -d "$SDK/build-tools/"* | sort -V | tail -n 1)
+          PLATFORM_JAR=$(ls "$SDK/platforms/android-"*/android.jar | sort -V | tail -n 1)
+
+          mkdir -p src/com/lucidwaker/pro res/drawable gen obj
+
+          echo '<?xml version="1.0" encoding="utf-8"?>' > res/drawable/ic_launcher.xml
+          echo '<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">' >> res/drawable/ic_launcher.xml
+          echo '<path android:fillColor="#060814" android:pathData="M0,0h108v108h-108z"/>' >> res/drawable/ic_launcher.xml
+          echo '<path android:fillColor="#8B5CF6" android:pathData="M54,20A34,34 0 1,0 88,54A28,28 0 1,1 54,20Z"/>' >> res/drawable/ic_launcher.xml
+          echo '<path android:fillColor="#F59E0B" android:pathData="M68,26L72,38L84,42L72,46L68,58L64,46L52,42L64,38Z"/>' >> res/drawable/ic_launcher.xml
+          echo '</vector>' >> res/drawable/ic_launcher.xml
+
+          echo '<?xml version="1.0" encoding="utf-8"?>' > AndroidManifest.xml
+          echo '<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.lucidwaker.pro" android:versionCode="4" android:versionName="4.0">' >> AndroidManifest.xml
+          echo '<uses-sdk android:minSdkVersion="24" android:targetSdkVersion="33" />' >> AndroidManifest.xml
+          echo '<uses-permission android:name="android.permission.INTERNET" />' >> AndroidManifest.xml
+          echo '<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />' >> AndroidManifest.xml
+          echo '<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />' >> AndroidManifest.xml
+          echo '<uses-permission android:name="android.permission.WAKE_LOCK" />' >> AndroidManifest.xml
+          echo '<uses-permission android:name="android.permission.VIBRATE" />' >> AndroidManifest.xml
+          echo '<application android:allowBackup="true" android:icon="@drawable/ic_launcher" android:label="Lucid Waker Ultra" android:theme="@android:style/Theme.DeviceDefault.NoActionBar">' >> AndroidManifest.xml
+          echo '<activity android:name=".MainActivity" android:exported="true" android:screenOrientation="portrait">' >> AndroidManifest.xml
+          echo '<intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>' >> AndroidManifest.xml
+          echo '</activity>' >> AndroidManifest.xml
+          echo '<service android:name=".LucidService" android:exported="false" />' >> AndroidManifest.xml
+          echo '</application></manifest>' >> AndroidManifest.xml
+
+          echo 'package com.lucidwaker.pro;' > src/com/lucidwaker/pro/MainActivity.java
+          echo 'import android.app.*;' >> src/com/lucidwaker/pro/MainActivity.java
+          echo 'import android.content.*;' >> src/com/lucidwaker/pro/MainActivity.java
+          echo 'import android.graphics.*;' >> src/com/lucidwaker/pro/MainActivity.java
+          echo 'import android.graphics.drawable.GradientDrawable;' >> src/com/lucidwaker/pro/MainActivity.java
+          echo 'import android.media.*;' >> src/com/lucidwaker/pro/MainActivity.java
+          echo 'import android.net.Uri;' >> src/com/lucidwaker/pro/MainActivity.java
+          echo 'import android.os.*;' >> src/com/lucidwaker/pro/MainActivity.java
+          echo 'import android.speech.tts.TextToSpeech;' >> src/com/lucidwaker/pro/MainActivity.java
+          echo 'import android.view.*;' >> src/com/lucidwaker/pro/MainActivity.java
+          echo 'import android.widget.*;' >> src/com/lucidwaker/pro/MainActivity.java
+          echo 'import java.net.URLEncoder;' >> src/com/lucidwaker/pro/MainActivity.java
+          echo 'import java.util.*;' >> src/com/lucidwaker/pro/MainActivity.java
+          echo 'public class MainActivity extends Activity implements TextToSpeech.OnInitListener {' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '  private TextToSpeech tts;' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '  private boolean isAr = true;' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '  private int selectedToneIndex = 0;' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '  private String customToneUri = null;' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '  private SharedPreferences prefs;' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '  private FrameLayout rootContainer;' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '  private final String[] tonesAr = new String[]{' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    "1. 🗣️ صوت بشري ناطق: (أنا أحلم الآن) + ثيتا",' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    "2. 🗣️ همس واعي: (افحص واقعك، أنت في حلم)",' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    "3. 🌸 ضوضاء وردية عميقة (Pink Noise)",' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    "4. ☁️ ضوضاء بيضاء نقية (White Noise)",' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    "5. 🍂 ضوضاء بنية دافئة (Brown Noise)",' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    "6. 🧠 نبضات ثيتا للأحلام الواضحة (6Hz)",' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    "7. ⚡ تردد غاما للوعي الفائق (40Hz)",' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    "8. 🌊 موجات دلتا العميقة (2Hz)",' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    "9. 🌍 رنين شومان الأرضي (7.83Hz)",' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    "10. 🔔 وعاء تبتي مقدس (432Hz)",' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    "11. 💎 وعاء كريستالي نقي (528Hz)",' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    "12. 👁️ تردد البصيرة والأحلام (852Hz)",' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    "13. ✨ تردد التاج الكوني (963Hz)",' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    "14. 🏖️ أمواج المحيط الهادئة",' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    "15. 🌧️ مطر ليلي خفيف",' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    "16. 🎐 أجراس الرياح الأثيرية",' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    "17. 🌌 الفضاء السحيق (174Hz Drone)",' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    "18. 💧 قطرة ماء (إشارة حلم Rausis)",' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    "19. 📡 نبضة سونار الوعي",' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    "20. 🎹 تناغم سماوي دافئ (Chord)",' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    "21. 📂 نغمتي الخاصة من الهاتف"' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '  };' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '  private final String[] tonesEn = new String[]{' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    "1. 🗣️ Human Voice: (I am dreaming now) + Theta",' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    "2. 🗣️ Lucid Whisper: (Check your reality)",' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    "3. 🌸 Deep Pink Noise",' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    "4. ☁️ Pure White Noise",' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    "5. 🍂 Warm Brown Noise",' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    "6. 🧠 Theta Dream Pulse (6Hz)",' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    "7. ⚡ Gamma Lucid Focus (40Hz)",' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    "8. 🌊 Delta Sleep Wave (2Hz)",' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    "9. 🌍 Schumann Resonance (7.83Hz)",' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    "10. 🔔 Tibetan Singing Bowl (432Hz)",' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    "11. 💎 Crystal Bowl (528Hz)",' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    "12. 👁️ Intuition Frequency (852Hz)",' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    "13. ✨ Cosmic Crown (963Hz)",' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    "14. 🏖️ Calm Ocean Waves",' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    "15. 🌧️ Gentle Night Rain",' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    "16. 🎐 Ethereal Wind Chimes",' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    "17. 🌌 Deep Space Drone (174Hz)",' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    "18. 💧 Water Drop Totem (Rausis)",' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    "19. 📡 Lucid Sonar Ping",' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    "20. 🎹 Warm Harmonic Dream Chord",' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    "21. 📂 My Custom Phone Audio"' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '  };' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '  @Override protected void onCreate(Bundle b) {' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    super.onCreate(b);' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    prefs = getSharedPreferences("lucid_ultra", MODE_PRIVATE);' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    isAr = prefs.getBoolean("isAr", true);' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    selectedToneIndex = prefs.getInt("toneIdx", 0);' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    customToneUri = prefs.getString("customUri", null);' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    tts = new TextToSpeech(this, this);' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    if (Build.VERSION.SDK_INT >= 33) requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 100);' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    getWindow().setStatusBarColor(Color.parseColor("#050711"));' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    getWindow().setNavigationBarColor(Color.parseColor("#050711"));' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    rootContainer = new FrameLayout(this);' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    setContentView(rootContainer);' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    renderUI(0);' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '  }' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '  @Override public void onInit(int s) { if (s == TextToSpeech.SUCCESS) { tts.setPitch(0.88f); tts.setSpeechRate(0.82f); } }' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '  private GradientDrawable box(String stroke) { GradientDrawable g = new GradientDrawable(); g.setColor(Color.parseColor("#11172B")); g.setCornerRadius(40f); g.setStroke(3, Color.parseColor(stroke)); return g; }' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '  private GradientDrawable grad(String c1, String c2) { GradientDrawable g = new GradientDrawable(GradientDrawable.Orientation.TL_BR, new int[]{Color.parseColor(c1), Color.parseColor(c2)}); g.setCornerRadius(36f); return g; }' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '  private void renderUI(final int tab) {' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    rootContainer.removeAllViews();' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    LinearLayout main = new LinearLayout(this); main.setOrientation(LinearLayout.VERTICAL); main.setBackgroundColor(Color.parseColor("#050711"));' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    main.setLayoutDirection(isAr ? View.LAYOUT_DIRECTION_RTL : View.LAYOUT_DIRECTION_LTR);' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    LinearLayout top = new LinearLayout(this); top.setOrientation(LinearLayout.HORIZONTAL); top.setPadding(40,45,40,25); top.setGravity(Gravity.CENTER_VERTICAL);' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    TextView title = new TextView(this); title.setText("🧭 Lucid Waker Ultra"); title.setTextSize(20f); title.setTypeface(null, Typeface.BOLD); title.setTextColor(Color.parseColor("#FDE68A"));' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    top.addView(title, new LinearLayout.LayoutParams(0, -2, 1f));' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    Button langBtn = new Button(this); langBtn.setText(isAr ? "English" : "العربية"); langBtn.setTextColor(Color.WHITE); langBtn.setBackground(box("#06B6D4"));' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    langBtn.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { isAr = !isAr; prefs.edit().putBoolean("isAr", isAr).apply(); renderUI(tab); } });' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    top.addView(langBtn); main.addView(top);' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    ScrollView sc = new ScrollView(this); LinearLayout body = new LinearLayout(this); body.setOrientation(LinearLayout.VERTICAL); body.setPadding(36,10,36,50);' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    if (tab == 0) buildTab0(body); else if (tab == 1) buildTab1(body); else buildTab2(body);' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    sc.addView(body); main.addView(sc, new LinearLayout.LayoutParams(-1, 0, 1f));' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    LinearLayout nav = new LinearLayout(this); nav.setOrientation(LinearLayout.HORIZONTAL); nav.setBackgroundColor(Color.parseColor("#0B0F1F")); nav.setPadding(16,20,16,20);' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    String[] labels = isAr ? new String[]{"⏰ المنبه والهدف", "🎧 20 نغمة", "🔮 السجل"} : new String[]{"⏰ Alarm", "🎧 20 Sounds", "🔮 Journal"};' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    for (int i=0; i<3; i++) { final int idx = i; Button b = new Button(this); b.setText(labels[i]); b.setTextColor(tab==i ? Color.parseColor("#FDE68A") : Color.GRAY); b.setBackground(tab==i ? box("#F59E0B") : null);' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '      b.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { renderUI(idx); } }); nav.addView(b, new LinearLayout.LayoutParams(0, -2, 1f)); }' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    main.addView(nav); rootContainer.addView(main);' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '  }' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '  private void buildTab0(LinearLayout p) {' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    LinearLayout c1 = new LinearLayout(this); c1.setOrientation(LinearLayout.VERTICAL); c1.setBackground(box("#F59E0B")); c1.setPadding(36,36,36,36);' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    TextView h1 = new TextView(this); h1.setText(isAr ? "✨ هدف الليلة وجملة التلقين الصوتي البشري" : "✨ Tonight Target & Human Voice Prompt"); h1.setTextColor(Color.parseColor("#FDE68A")); h1.setTextSize(15f); h1.setTypeface(null, Typeface.BOLD); c1.addView(h1);' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    final EditText tIn = new EditText(this); tIn.setText(prefs.getString("targetTxt", isAr ? "أنا أحلم الآن.. جسدي نائم وعقلي واعٍ، سأنظر في المرآة داخل الحلم" : "I am dreaming right now, my mind is awake")); tIn.setTextColor(Color.WHITE); c1.addView(tIn);' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    Button spBtn = new Button(this); spBtn.setText(isAr ? "🔊 سماع نطق المتحدث الآن" : "🔊 Test Human Voice Now"); spBtn.setTextColor(Color.WHITE); spBtn.setBackground(grad("#7C3AED", "#0891B2"));' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    spBtn.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { String s = tIn.getText().toString(); prefs.edit().putString("targetTxt", s).apply(); speakVoice(MainActivity.this, tts, s, isAr); } }); c1.addView(spBtn);' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2); lp.bottomMargin = 32; p.addView(c1, lp);' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    LinearLayout c2 = new LinearLayout(this); c2.setOrientation(LinearLayout.VERTICAL); c2.setBackground(box("#8B5CF6")); c2.setPadding(36,36,36,36);' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    final int[] vals = new int[]{prefs.getInt("startM", 270), prefs.getInt("repM", 15), prefs.getInt("repC", 3), prefs.getInt("stopS", 25)};' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    final TextView lStart = new TextView(this); lStart.setText((isAr ? "⏰ المنبه الأول بعد (دقائق): " : "⏰ First Alarm in (mins): ") + vals[0]); lStart.setTextColor(Color.parseColor("#67E8F9")); c2.addView(lStart);' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    SeekBar sb0 = new SeekBar(this); sb0.setMax(480); sb0.setProgress(vals[0]); sb0.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() { public void onProgressChanged(SeekBar s, int pr, boolean u) { vals[0] = Math.max(1, pr); prefs.edit().putInt("startM", vals[0]).apply(); lStart.setText((isAr ? "⏰ المنبه الأول بعد (دقائق): " : "⏰ First Alarm in (mins): ") + vals[0]); } public void onStartTrackingTouch(SeekBar s){} public void onStopTrackingTouch(SeekBar s){} }); c2.addView(sb0);' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    final TextView lRep = new TextView(this); lRep.setText((isAr ? "🔁 عدد مرات التكرار: " : "🔁 Repeat Count: ") + vals[2]); lRep.setTextColor(Color.WHITE); lRep.setPadding(0,20,0,0); c2.addView(lRep);' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    SeekBar sb2 = new SeekBar(this); sb2.setMax(10); sb2.setProgress(vals[2]); sb2.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() { public void onProgressChanged(SeekBar s, int pr, boolean u) { vals[2] = Math.max(1, pr); prefs.edit().putInt("repC", vals[2]).apply(); lRep.setText((isAr ? "🔁 عدد مرات التكرار: " : "🔁 Repeat Count: ") + vals[2]); } public void onStartTrackingTouch(SeekBar s){} public void onStopTrackingTouch(SeekBar s){} }); c2.addView(sb2);' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    final TextView lGap = new TextView(this); lGap.setText((isAr ? "⏱️ الفاصل بين الرنات (دقائق): " : "⏱️ Interval (mins): ") + vals[1]); lGap.setTextColor(Color.WHITE); lGap.setPadding(0,20,0,0); c2.addView(lGap);' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    SeekBar sb1 = new SeekBar(this); sb1.setMax(90); sb1.setProgress(vals[1]); sb1.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() { public void onProgressChanged(SeekBar s, int pr, boolean u) { vals[1] = Math.max(5, pr); prefs.edit().putInt("repM", vals[1]).apply(); lGap.setText((isAr ? "⏱️ الفاصل بين الرنات (دقائق): " : "⏱️ Interval (mins): ") + vals[1]); } public void onStartTrackingTouch(SeekBar s){} public void onStopTrackingTouch(SeekBar s){} }); c2.addView(sb1);' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    final TextView lStop = new TextView(this); lStop.setText((isAr ? "🛑 إيقاف تلقائي بدون لمس (ثانية): " : "🛑 Touchless Auto-Stop (sec): ") + vals[3]); lStop.setTextColor(Color.WHITE); lStop.setPadding(0,20,0,0); c2.addView(lStop);' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    SeekBar sb3 = new SeekBar(this); sb3.setMax(90); sb3.setProgre
