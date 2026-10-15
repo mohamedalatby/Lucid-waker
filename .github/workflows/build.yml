@@ -9,13 +9,20 @@ jobs:
   build-apk:
     runs-on: ubuntu-latest
     steps:
-      - name: Compile and Sign Native Android APK Directly
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Compile and Sign Native Android APK
         run: |
+          set -e
           SDK="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
           BUILD_TOOLS=$(ls -d "$SDK/build-tools/"* | sort -V | tail -n 1)
           PLATFORM_JAR=$(ls "$SDK/platforms/android-"*/android.jar | sort -V | tail -n 1)
 
-          mkdir -p src/com/lucidwaker/pro res/drawable gen obj
+          mkdir -p src/com/lucidwaker/pro res/drawable compiled_res gen obj
 
           echo '<?xml version="1.0" encoding="utf-8"?>' > res/drawable/ic_launcher.xml
           echo '<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">' >> res/drawable/ic_launcher.xml
@@ -25,7 +32,7 @@ jobs:
           echo '</vector>' >> res/drawable/ic_launcher.xml
 
           echo '<?xml version="1.0" encoding="utf-8"?>' > AndroidManifest.xml
-          echo '<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.lucidwaker.pro" android:versionCode="4" android:versionName="4.0">' >> AndroidManifest.xml
+          echo '<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.lucidwaker.pro" android:versionCode="5" android:versionName="5.0">' >> AndroidManifest.xml
           echo '<uses-sdk android:minSdkVersion="24" android:targetSdkVersion="33" />' >> AndroidManifest.xml
           echo '<uses-permission android:name="android.permission.INTERNET" />' >> AndroidManifest.xml
           echo '<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />' >> AndroidManifest.xml
@@ -122,6 +129,7 @@ jobs:
           echo '  @Override public void onInit(int s) { if (s == TextToSpeech.SUCCESS) { tts.setPitch(0.88f); tts.setSpeechRate(0.82f); } }' >> src/com/lucidwaker/pro/MainActivity.java
           echo '  private GradientDrawable box(String stroke) { GradientDrawable g = new GradientDrawable(); g.setColor(Color.parseColor("#11172B")); g.setCornerRadius(40f); g.setStroke(3, Color.parseColor(stroke)); return g; }' >> src/com/lucidwaker/pro/MainActivity.java
           echo '  private GradientDrawable grad(String c1, String c2) { GradientDrawable g = new GradientDrawable(GradientDrawable.Orientation.TL_BR, new int[]{Color.parseColor(c1), Color.parseColor(c2)}); g.setCornerRadius(36f); return g; }' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '  private LinearLayout.LayoutParams mlp(int btm) { LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2); lp.bottomMargin = btm; return lp; }' >> src/com/lucidwaker/pro/MainActivity.java
           echo '  private void renderUI(final int tab) {' >> src/com/lucidwaker/pro/MainActivity.java
           echo '    rootContainer.removeAllViews();' >> src/com/lucidwaker/pro/MainActivity.java
           echo '    LinearLayout main = new LinearLayout(this); main.setOrientation(LinearLayout.VERTICAL); main.setBackgroundColor(Color.parseColor("#050711"));' >> src/com/lucidwaker/pro/MainActivity.java
@@ -147,7 +155,7 @@ jobs:
           echo '    final EditText tIn = new EditText(this); tIn.setText(prefs.getString("targetTxt", isAr ? "أنا أحلم الآن.. جسدي نائم وعقلي واعٍ، سأنظر في المرآة داخل الحلم" : "I am dreaming right now, my mind is awake")); tIn.setTextColor(Color.WHITE); c1.addView(tIn);' >> src/com/lucidwaker/pro/MainActivity.java
           echo '    Button spBtn = new Button(this); spBtn.setText(isAr ? "🔊 سماع نطق المتحدث الآن" : "🔊 Test Human Voice Now"); spBtn.setTextColor(Color.WHITE); spBtn.setBackground(grad("#7C3AED", "#0891B2"));' >> src/com/lucidwaker/pro/MainActivity.java
           echo '    spBtn.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { String s = tIn.getText().toString(); prefs.edit().putString("targetTxt", s).apply(); speakVoice(MainActivity.this, tts, s, isAr); } }); c1.addView(spBtn);' >> src/com/lucidwaker/pro/MainActivity.java
-          echo '    LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2); lp.bottomMargin = 32; p.addView(c1, lp);' >> src/com/lucidwaker/pro/MainActivity.java
+          echo '    p.addView(c1, mlp(32));' >> src/com/lucidwaker/pro/MainActivity.java
           echo '    LinearLayout c2 = new LinearLayout(this); c2.setOrientation(LinearLayout.VERTICAL); c2.setBackground(box("#8B5CF6")); c2.setPadding(36,36,36,36);' >> src/com/lucidwaker/pro/MainActivity.java
           echo '    final int[] vals = new int[]{prefs.getInt("startM", 270), prefs.getInt("repM", 15), prefs.getInt("repC", 3), prefs.getInt("stopS", 25)};' >> src/com/lucidwaker/pro/MainActivity.java
           echo '    final TextView lStart = new TextView(this); lStart.setText((isAr ? "⏰ المنبه الأول بعد (دقائق): " : "⏰ First Alarm in (mins): ") + vals[0]); lStart.setTextColor(Color.parseColor("#67E8F9")); c2.addView(lStart);' >> src/com/lucidwaker/pro/MainActivity.java
@@ -156,5 +164,4 @@ jobs:
           echo '    SeekBar sb2 = new SeekBar(this); sb2.setMax(10); sb2.setProgress(vals[2]); sb2.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() { public void onProgressChanged(SeekBar s, int pr, boolean u) { vals[2] = Math.max(1, pr); prefs.edit().putInt("repC", vals[2]).apply(); lRep.setText((isAr ? "🔁 عدد مرات التكرار: " : "🔁 Repeat Count: ") + vals[2]); } public void onStartTrackingTouch(SeekBar s){} public void onStopTrackingTouch(SeekBar s){} }); c2.addView(sb2);' >> src/com/lucidwaker/pro/MainActivity.java
           echo '    final TextView lGap = new TextView(this); lGap.setText((isAr ? "⏱️ الفاصل بين الرنات (دقائق): " : "⏱️ Interval (mins): ") + vals[1]); lGap.setTextColor(Color.WHITE); lGap.setPadding(0,20,0,0); c2.addView(lGap);' >> src/com/lucidwaker/pro/MainActivity.java
           echo '    SeekBar sb1 = new SeekBar(this); sb1.setMax(90); sb1.setProgress(vals[1]); sb1.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() { public void onProgressChanged(SeekBar s, int pr, boolean u) { vals[1] = Math.max(5, pr); prefs.edit().putInt("repM", vals[1]).apply(); lGap.setText((isAr ? "⏱️ الفاصل بين الرنات (دقائق): " : "⏱️ Interval (mins): ") + vals[1]); } public void onStartTrackingTouch(SeekBar s){} public void onStopTrackingTouch(SeekBar s){} }); c2.addView(sb1);' >> src/com/lucidwaker/pro/MainActivity.java
-          echo '    final TextView lStop = new TextView(this); lStop.setText((isAr ? "🛑 إيقاف تلقائي بدون لمس (ثانية): " : "🛑 Touchless Auto-Stop (sec): ") + vals[3]); lStop.setTextColor(Color.WHITE); lStop.setPadding(0,20,0,0); c2.addView(lStop);' >> src/com/lucidwaker/pro/MainActivity.java
-          echo '    SeekBar sb3 = new SeekBar(this); sb3.setMax(90); sb3.setProgre
+          echo '    final TextView lStop = new TextView(this); lStop.setText((isAr 
